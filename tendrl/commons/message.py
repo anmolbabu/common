@@ -50,6 +50,8 @@ class Message(object):
         else:
             self.caller = caller
         self.priority = priority
+        if not publisher:
+            publisher = NS.publisher_id
         self.publisher = publisher
         self.node_id = node_id
         if self.node_id is None:

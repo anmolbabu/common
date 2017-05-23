@@ -36,7 +36,11 @@ class Command(object):
             raise UnsupportedCommandException(command.split()[0])
         self.attributes = {"_raw_params": command, '_uses_shell': shell}
 
-    def run(self):
+    def run(self, publisher=None, node_id=None, socket_path=None):
+        if not publisher:
+            publisher = NS.publisher_id
+        if not node_id:
+            node_id = NS.node_context.node_id
         try:
             runner = ansible_module_runner.AnsibleRunner(
                 ANSIBLE_MODULE_PATH,
@@ -54,9 +58,11 @@ class Command(object):
                 Event(
                     Message(
                         priority="debug",
-                        publisher=NS.publisher_id,
-                        payload={"message": "Command Execution: %s" % result}
-                    )
+                        publisher=publisher,
+                        payload={"message": "Command Execution: %s" % result},
+                        node_id=node_id
+                    ),
+                    socket_path=socket_path
                 )
             except KeyError:
                 sys.stdout.write("Command Execution: %s \n" % result)
@@ -65,12 +71,14 @@ class Command(object):
                 Event(
                     ExceptionMessage(
                         priority="error",
-                        publisher=NS.publisher_id,
+                        publisher=publisher,
                         payload={"message": "could not run the command %s. " %
                                             self.attributes["_raw_params"],
                                  "exception": e
-                                 }
-                    )
+                                 },
+                        node_id=node_id
+                    ),
+                    socket_path=socket_path
                 )
             except KeyError:
                 sys.stderr.write("could not run the command %s. Error: %s" %

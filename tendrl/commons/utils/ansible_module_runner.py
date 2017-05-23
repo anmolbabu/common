@@ -31,26 +31,46 @@ class AnsibleRunner(object):
 
     """
 
-    def __init__(self, module_path, **kwargs):
+    def __init__(
+        self,
+        module_path,
+        publisher=None,
+        node_id=None,
+        socket_path=None,
+        **kwargs
+    ):
         self.module_path = modules.__path__[0] + "/" + module_path
+        self.publisher = publisher
+        self.node_id = node_id
+        self.socket_path = socket_path
+        if not publisher:
+            self.publisher = NS.publisher_id
+        if not node_id:
+            self.node_id = NS.node_context.node_id
+        if not socket_path:
+            self.socket_path = NS.config.data['logging_socket_path']
         if not os.path.isfile(self.module_path):
             Event(
                 Message(
                     priority="debug",
-                    publisher=NS.publisher_id,
+                    publisher=self.publisher,
                     payload={"message": "Module path: %s does not exist" %
                                         self.module_path
-                             }
-                )
+                             },
+                    node_id=self.node_id
+                ),
+                socket_path=self.socket_path
             )
             raise AnsibleModuleNotFound(module_path=self.module_path)
         if kwargs == {}:
             Event(
                 Message(
                     priority="error",
-                    publisher=NS.publisher_id,
-                    payload={"message": "Empty argument dictionary"}
-                )
+                    publisher=self.publisher,
+                    payload={"message": "Empty argument dictionary"},
+                    node_id=self.node_id
+                ),
+                socket_path=self.socket_path
             )
             raise ValueError
         else:
@@ -73,13 +93,15 @@ class AnsibleRunner(object):
             Event(
                 Message(
                     priority="error",
-                    publisher=NS.publisher_id,
+                    publisher=self.publisher_id,
                     payload={"message": "Could not generate ansible "
                                         "executable data "
                                         "for module  : %s. Error: %s" %
                                         (self.module_path, str(e))
-                             }
-                )
+                             },
+                    node_id=self.node_id
+                ),
+                socket_path=self.socket_path
             )
             raise AnsibleExecutableGenerationFailed(
                 module_path=self.module_path,
